@@ -29,6 +29,7 @@ const logOrSign = async (req: NextApiRequest, res: NextApiResponse) => {
     const mailRes = await axios.post(process.env.NEXT_PUBLIC_MAIL, {
       email: req.body.email,
       verification,
+      site: process.env.NEXT_PUBLIC_SITE,
     });
 
     if (!mailRes) {
