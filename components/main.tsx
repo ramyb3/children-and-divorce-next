@@ -11,9 +11,19 @@ export default function MainPage() {
   const [num, setNum] = useState<number | undefined>(undefined);
   const [firstFriday, setFirstFriday] = useState("");
   const [email, setEmail] = useState("");
+  const [mailText, setMailText] = useState<MailTemplate | null>(null);
 
   useEffect(() => {
-    sendMail("Site Enter");
+    const mail = async () => {
+      const resp = await getUserAgent();
+
+      if (resp) {
+        setMailText(resp);
+        sendMail(resp, "Site Enter");
+      }
+    };
+
+    mail();
   }, []);
 
   const login = async () => {
@@ -35,14 +45,14 @@ export default function MainPage() {
         setVerification(true);
         alert(resp.data.message);
 
-        await sendMail(`First Sign- ${email}`);
+        await sendMail(mailText, `First Sign- ${email}`);
       } else {
         setVerification(false);
         setAuthorized(true);
         setFirstFriday(resp.data.firstFriday);
         setOpen(false);
 
-        await sendMail(`Logged in- ${email}`);
+        await sendMail(mailText, `Logged in- ${email}`);
       }
     } catch (e) {
       alert("נסו שוב");
@@ -62,7 +72,7 @@ export default function MainPage() {
       setAuthorized(true);
       setOpen(false);
 
-      await sendMail(`Complete Sign Up- ${email}`);
+      await sendMail(mailText, `Complete Sign Up- ${email}`);
     } catch (e: any) {
       setNum(undefined);
       alert(e.response.data);
@@ -113,25 +123,37 @@ export default function MainPage() {
   );
 }
 
-const sendMail = async (text: string) => {
+type MailTemplate = {
+  resolution: string;
+  response: string;
+  name: string;
+};
+
+async function getUserAgent() {
+  let body = null;
+
   try {
     const response = await axios.get(
       `https://api.apicagent.com/?ua=${navigator.userAgent}`
     );
 
-    const body = {
+    body = {
       resolution: `${window.screen.width} X ${window.screen.height}`,
       response: JSON.stringify(response.data, null, 2),
-      name: `Children-Divorce NextJS - ${
-        JSON.stringify(response.data).toLowerCase().includes("mobile")
-          ? "Mobile"
-          : "Desktop"
-      }`,
+      name: "Children-Divorce NextJS",
     };
-
-    //@ts-ignore
-    await axios.post(process.env.NEXT_PUBLIC_MAIL, { ...body, text });
   } catch (e) {
     console.error(e);
   }
-};
+
+  return body;
+}
+
+async function sendMail(mailText: MailTemplate | null, text: string) {
+  try {
+    //@ts-ignore
+    await axios.post(process.env.NEXT_PUBLIC_MAIL, { ...mailText, text });
+  } catch (e) {
+    console.error(e);
+  }
+}
